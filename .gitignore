@@ -1,0 +1,49 @@
+# Datensätze (nicht im Repository – siehe README)
+dataset/
+datasets/
+data/
+EiDL_TestDaten_SoSe26/
+
+# Experiment-Tracking (lokale W&B-Logs)
+wandb/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+env/
+.venv/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+
+# LaTeX-Hilfsdateien
+*.aux
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.synctex.gz
+
+# Daten-/Bilddateien – ausgenommen die Ergebnisse in results/
+*.h5
+*.pkl
+*.csv
+*.jpg
+*.jpeg
+*.png
+*.gif
+!results/*.png
+!results/*.csv
+
+# Hilfsskript zur Erzeugung der .gitignore
+/gitignore
+
+# Systemdateien
+.DS_Store
+Thumbs.db

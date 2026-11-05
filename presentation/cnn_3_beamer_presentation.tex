@@ -1,0 +1,259 @@
+\documentclass{beamer}
+\usetheme{Berlin}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multicol}
+\usepackage{caption}
+\usepackage{color}
+\usepackage{colortbl}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+\title{Klassifikation von Kleidungsstuecken mit einem CNN}
+\subtitle{Projektpraesentation basierend auf cnn\_3.ipynb}
+\author{Vades Ngounouo Djoko \and Lister Melaguie}
+\institute{Deep Learning}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}{Projektname und Ziel}
+\textbf{Projektname:} ClothingCNN - Bildklassifikation von Kleidungsstuecken
+
+\vspace{0.5em}
+\textbf{Ziel:}
+\begin{itemize}
+    \item Aufbau und Training eines Convolutional Neural Networks zur Klassifikation von 5 Kleidungsklassen.
+    \item Robuste Generalisierung durch Datenaugmentation, Learning-Rate-Scheduling und Early Stopping.
+    \item Analyse der Fehlerfaelle mittels Konfusionsmatrix und Fehlklassifikationsbeispielen.
+\end{itemize}
+
+\vspace{0.5em}
+\textbf{Klassen:} long-sleeved, pants, shorts, socks, t-shirt
+\end{frame}
+
+\begin{frame}{Datensatz: Umfang und Struktur}
+\begin{itemize}
+    \item Gesamtanzahl Bilder: \textbf{3899}
+    \item Bildbreite: min 224, max 5712, Mittelwert 1209.5, Std 978.5
+    \item Bildhoehe: min 224, max 5712, Mittelwert 1236.3, Std 766.0
+    \item Seitenverhaeltnis (B/H): min 0.405, max 2.248, Mittelwert 0.977
+    \item Farbkanaele: \textbf{100\% RGB} (3899 Bilder)
+\end{itemize}
+
+\vspace{0.4em}
+\textbf{Datensplit:}
+\begin{itemize}
+    \item Train: 3119 (80\%)
+    \item Validation: 389 (10\%)
+    \item Test: 391 (10\%)
+\end{itemize}
+
+% Platzhalter fuer Bild: image_distribution.png
+% \includegraphics[width=0.9\textwidth]{image_distribution.png}
+\end{frame}
+
+\begin{frame}{Klassenverteilung}
+\begin{table}[h]
+\centering
+\begin{tabular}{l r}
+\toprule
+\textbf{Klasse} & \textbf{Anzahl Bilder} \\
+\midrule
+long-sleeved & 787 \\
+pants & 783 \\
+shorts & 767 \\
+socks & 781 \\
+t-shirt & 781 \\
+\midrule
+\textbf{Gesamt} & \textbf{3899} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+    \item Ungleichgewichtsverhaeltnis (max/min): \textbf{1.026}
+    \item Interpretation: Klassen sind gut ausbalanciert, keine Klassengewichtung in der Loss notwendig.
+\end{itemize}
+
+% Platzhalter fuer Bild: class_distribution.png
+% \includegraphics[width=0.85\textwidth]{class_distribution.png}
+\end{frame}
+
+\begin{frame}{Vorverarbeitung und Augmentierung}
+\textbf{Train-Transformationen:}
+\begin{itemize}
+    \item Resize(256), RandomResizedCrop(224, scale=[0.8,1.0])
+    \item RandomHorizontalFlip(0.5)
+    \item RandomRotation(10)
+    \item ColorJitter(brightness/contrast/saturation = 0.2)
+    \item Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225])
+\end{itemize}
+
+\textbf{Validation/Test:}
+\begin{itemize}
+    \item Resize(256), CenterCrop(224), Normalize(...)
+\end{itemize}
+
+\textbf{Nutzen:} Hoehere Robustheit und bessere Generalisierung bei variierenden Perspektiven/Beleuchtung.
+
+% Platzhalter fuer Bilder:
+% augmented_samples.png
+% original_vs_augmented.png
+\end{frame}
+
+\begin{frame}{Modellarchitektur (ClothingCNN)}
+\small
+\begin{itemize}
+    \item Eingabe: $3 \times 224 \times 224$
+    \item Block 1: Conv2d(3,32,3,pad=1) $\rightarrow$ BatchNorm2d(32) $\rightarrow$ ReLU $\rightarrow$ MaxPool2d(2)
+    \item Block 2: Conv2d(32,64,3,pad=1) $\rightarrow$ BatchNorm2d(64) $\rightarrow$ ReLU $\rightarrow$ MaxPool2d(2)
+    \item Block 3: Conv2d(64,128,3,pad=1) $\rightarrow$ BatchNorm2d(128) $\rightarrow$ ReLU $\rightarrow$ MaxPool2d(2)
+    \item Block 4: Conv2d(128,256,3,pad=1) $\rightarrow$ BatchNorm2d(256) $\rightarrow$ ReLU $\rightarrow$ MaxPool2d(2)
+    \item Global Average Pooling: AdaptiveAvgPool2d(1,1)
+    \item Klassifikator: Dropout(0.3) $\rightarrow$ Linear(256,256) $\rightarrow$ ReLU $\rightarrow$ Dropout(0.2) $\rightarrow$ Linear(256,5)
+    \item Ausgabe: 5 Klassenlogits
+\end{itemize}
+
+\textbf{Forward-Check:} Eingabe $[4,3,224,224] \rightarrow$ Ausgabe $[4,5]$.
+\end{frame}
+
+\begin{frame}{Trainierbare Parameter pro Schicht}
+\scriptsize
+\begin{table}[h]
+\centering
+\begin{tabular}{l r}
+\toprule
+\textbf{Schicht} & \textbf{Trainierbare Parameter} \\
+\midrule
+Conv2d(3,32,3x3) & 896 \\
+BatchNorm2d(32) & 64 \\
+Conv2d(32,64,3x3) & 18496 \\
+BatchNorm2d(64) & 128 \\
+Conv2d(64,128,3x3) & 73856 \\
+BatchNorm2d(128) & 256 \\
+Conv2d(128,256,3x3) & 295168 \\
+BatchNorm2d(256) & 512 \\
+Linear(256,256) & 65792 \\
+Linear(256,5) & 1285 \\
+\midrule
+\textbf{Gesamt} & \textbf{456453} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Hinweis:} Dropout, ReLU, MaxPooling und GAP haben keine trainierbaren Parameter.
+\end{frame}
+
+\begin{frame}{Trainingsparameter und Callbacks}
+\textbf{Training-Setup:}
+\begin{itemize}
+    \item Device: CPU (kein GPU-Accelerator erkannt)
+    \item Batch-Size: 32
+    \item Epochen: 50 (Loop), W\&B-Config auf 100 gesetzt
+    \item Loss-Funktion: CrossEntropyLoss
+    \item Optimierer: Adam ($lr=3\cdot10^{-4}$, weight\_decay=$10^{-4}$)
+    \item Scheduler: ReduceLROnPlateau (factor=0.5, patience=3, min\_lr=$10^{-6}$)
+\end{itemize}
+
+\textbf{Callback: Early Stopping}
+\begin{itemize}
+    \item patience = 7, min\_delta = $10^{-4}$
+    \item Speichert bestes Modell in best\_model.pth
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Trainingsergebnisse}
+\begin{itemize}
+    \item Bestes Validierungsmodell: \textbf{Epoche 46}
+    \item Beste Val-Loss: \textbf{1.1326}
+    \item Letzte Epoche (50):
+    \begin{itemize}
+        \item Train-Loss: 1.0305
+        \item Train-Accuracy: 59.92\%
+        \item Val-Loss: 1.1365
+        \item Val-Accuracy: 54.24\%
+    \end{itemize}
+    \item Lernrate wurde schrittweise reduziert bis ca. $1.87\cdot10^{-5}$
+\end{itemize}
+
+% Platzhalter fuer Bild: training_curves.png
+% \includegraphics[width=0.95\textwidth]{training_curves.png}
+\end{frame}
+
+\begin{frame}{Testergebnisse und Konfusionsmatrix}
+\small
+\begin{itemize}
+    \item Gesamtgenauigkeit Testset: \textbf{53.71\%}
+    \item Klassenspezifische F1-Scores:
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{l c c c}
+\toprule
+\textbf{Klasse} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} \\
+\midrule
+long-sleeved & 0.510 & 0.298 & 0.376 \\
+pants & 0.559 & 0.747 & 0.639 \\
+shorts & 0.373 & 0.322 & 0.345 \\
+socks & 0.654 & 0.726 & 0.688 \\
+t-shirt & 0.515 & 0.554 & 0.534 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Platzhalter fuer Bild: confusion_matrix.png
+% \includegraphics[width=0.55\textwidth]{confusion_matrix.png}
+\end{frame}
+
+\begin{frame}{Herausforderungen und Loesungsansaetze}
+\textbf{Beobachtete Herausforderungen:}
+\begin{itemize}
+    \item Visuelle Aehnlichkeit zwischen Klassen (z.B. shorts vs. pants, t-shirt vs. long-sleeved)
+    \item Unterschiedliche Bildausschnitte und Perspektiven
+    \item Informationsverlust durch mehrfache Pooling-Schritte (feine Texturdetails)
+\end{itemize}
+
+\textbf{Umgesetzte Loesungen:}
+\begin{itemize}
+    \item Datenaugmentation (Flip, Rotation, ColorJitter, RandomResizedCrop)
+    \item Adaptive Lernrate (ReduceLROnPlateau)
+    \item Early Stopping und Best-Checkpoint-Reload
+    \item Detaillierte Fehleranalyse mit Konfusionsmatrix und Fehlklassifikationen
+\end{itemize}
+
+% Platzhalter fuer Bild: misclassified.png
+% \includegraphics[width=0.8\textwidth]{misclassified.png}
+\end{frame}
+
+\begin{frame}{Fazit und naechste Schritte}
+\textbf{Fazit:}
+\begin{itemize}
+    \item Das CNN lernt sinnvolle Merkmale und erreicht \textbf{53.71\%} Testgenauigkeit auf 5 Klassen.
+    \item Staerkste Klassen: socks und pants (hoher Recall/F1).
+    \item Schwierigere Klassen: shorts und long-sleeved.
+\end{itemize}
+
+\textbf{Moegliche Verbesserungen:}
+\begin{itemize}
+    \item Transfer Learning (z.B. ResNet, EfficientNet)
+    \item Feinere Augmentierungsstrategie und hoehere Eingangsaufloesung
+    \item Hyperparameter-Tuning und ggf. class-spezifische Loss-Strategien
+    \item Sicheres Secret-Handling (W\&B API-Key ueber Umgebungsvariablen statt im Notebook)
+\end{itemize}
+\end{frame}
+
+\end{document}
